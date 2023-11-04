@@ -59,6 +59,7 @@ return [
 
     'asset_url' => env('ASSET_URL'),
 
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
@@ -183,6 +184,8 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
+        'QR' => Modules\QR\Facades\QR::class,
+        
     ])->toArray(),
 
 ];

@@ -1,0 +1,77 @@
+// Fonts
+
+$font-path: "../fonts";
+
+@font-face {
+    src: url("#{$font-path}/Lexend-VariableFont_wght.ttf") format("ttf");
+    font-family: "Lexend";
+}
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+body {
+    background: $body-bg;
+    font-family: 'Lexend', sans-serif !important;
+}
+
+
+#navbar {
+    background-color: $brand-color ;
+}
+
+.navbar-nav {
+    flex-direction: row;
+    justify-content: end;
+}
+
+.navlink a {
+    color: blue !important;
+}
+
+.navlink a:hover {
+    color: red !important;
+}
+
+[data-theme="dark"] {
+    background-color: #111 !important;
+    color: #eee;
+}
+
+[data-theme="dark"] .bg-black {
+    background-color: #fff !important;
+}
+
+[data-theme="dark"] .bg-dark {
+    background-color: #eee !important;
+}
+
+[data-theme="dark"] .bg-light {
+    background-color: #222 !important;
+}
+
+[data-theme="dark"] .bg-white {
+    background-color: #000 !important;
+}
+
+[data-theme="dark"] .nav-link {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .text-muted {
+    color: #fff !important;
+}
+
+@media (max-width: 576px) {
+    .img-sm {
+        width: 250px; /* Adjust this width as needed for small screens */
+        height: auto;
+    }
+}
+
+#personalInfo {
+    border: none;
+}
