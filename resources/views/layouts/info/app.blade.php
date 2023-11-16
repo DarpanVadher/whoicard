@@ -39,6 +39,10 @@
 
         @include('layouts.info.footer')
     </body>
+
+
+    @yield('pageModels')
+
     <!-- Jquery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
     <script type="text/javascript">

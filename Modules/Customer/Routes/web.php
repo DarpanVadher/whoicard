@@ -27,7 +27,9 @@ Route::group(['prefix' => 'info'], function () {
     Route::get('/{username}','CustomerController@show')->name('customer.view');
     Route::get('/{username}/edit','CustomerController@edit')->name('customer.edit');
     Route::post('/customer/update','CustomerController@update');
-
+    Route::post('/customer/mail/send/inquery','CustomerController@sendInqueryMail');
+    Route::post('/customer/mail/send/exchangeContact','CustomerController@sendexchangeContactMail');
+    Route::get('/{username}/vcard','CustomerController@downloadVcard');
 });
 
 

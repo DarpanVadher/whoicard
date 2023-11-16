@@ -2,6 +2,7 @@
 
 namespace Modules\Customer\Http\Controllers;
 
+use Illuminate\Http\Response;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -11,7 +12,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Modules\Customer\Entities\customer;
 use Modules\Customer\Entities\customer_documents;
+use Modules\Customer\Entities\Inquery;
 use Modules\SiteSetting\Entities\ProfileTemplate;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\inqueryMail;
+use App\Mail\exchangeContactMail;
+use JeroenDesloovere\VCard\VCard;
 
 class CustomerController extends Controller
 {
@@ -38,7 +44,7 @@ class CustomerController extends Controller
 
         // print_r($getProfileTemplate);
 
-        return view('customer::index', ['qrIdentifier' => $qrIdentifier,'profileTemplate' => $getProfileTemplate]);
+        return view('customer::index', ['qrIdentifier' => $qrIdentifier, 'profileTemplate' => $getProfileTemplate]);
     }
 
     /**
@@ -73,13 +79,13 @@ class CustomerController extends Controller
         if ($request->hasFile('profileImage')) {
             $image = $request->file('profileImage');
             $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $imagePath = '/customer/'.$customer->customUrl;
+            $imagePath = '/customer/' . $customer->customUrl;
 
             if (!Storage::exists($imagePath)) {
                 Storage::makeDirectory($imagePath, 0775, true); //creates directory
             }
 
-            Storage::disk('public')->put($imagePath.'/'.$imageName, file_get_contents($image));
+            Storage::disk('public')->put($imagePath . '/' . $imageName, file_get_contents($image));
             $customer->image = $imageName;
             $customer->profile = $imageName;
         }
@@ -106,14 +112,14 @@ class CustomerController extends Controller
 
                 $image = $document;
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = '/customer/'.$customer->customUrl.'/documents';
+                $imagePath = '/customer/' . $customer->customUrl . '/documents';
 
                 if (!Storage::exists($imagePath)) {
                     Storage::makeDirectory($imagePath, 0775, true); //creates directory
                 }
 
-                Storage::disk('public')->put($imagePath.'/'.$imageName, file_get_contents($image));
-                $cutomerDocuments[] = ['fileName' => $imageName, 'fileUrl' => $imagePath.'/'.$imageName, 'fileType' => $image->getClientOriginalExtension(), 'fileSize' => $image->getSize(),'customerId' => $customer->id];
+                Storage::disk('public')->put($imagePath . '/' . $imageName, file_get_contents($image));
+                $cutomerDocuments[] = ['fileName' => $imageName, 'fileUrl' => $imagePath . '/' . $imageName, 'fileType' => $image->getClientOriginalExtension(), 'fileSize' => $image->getSize(), 'customerId' => $customer->id];
             }
         }
 
@@ -158,7 +164,7 @@ class CustomerController extends Controller
 
         $getProfileTemplate = ProfileTemplate::all();
 
-        return view('customer::edit', ['customerData' => $customerData,'profileTemplate' => $getProfileTemplate]);
+        return view('customer::edit', ['customerData' => $customerData, 'profileTemplate' => $getProfileTemplate]);
     }
 
     /**
@@ -203,7 +209,7 @@ class CustomerController extends Controller
         $customer->contactNumber = $request->number;
         // $customer->profile = $request->number;
         // $customer->image = $request->profileImage === null ? $customer->image : $request->profileImage;
-         $customer->customUrl     = $request->username;
+        $customer->customUrl     = $request->username;
         $customer->editCode = $request->password;
         $customer->personalData = $request->info;
         // $customer->documents = $request->documents;
@@ -212,8 +218,8 @@ class CustomerController extends Controller
         print_r($request->file('profileImage'));
         print_r($request->hasFile('profileImage'));
 
-         // Image Upload
-         if ($request->hasFile('profileImage')) {
+        // Image Upload
+        if ($request->hasFile('profileImage')) {
 
 
 
@@ -223,7 +229,7 @@ class CustomerController extends Controller
             print_r($image);
             print_r($image->getClientOriginalExtension());
             $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $imagePath = 'customer/'.$customer->customUrl;
+            $imagePath = 'customer/' . $customer->customUrl;
 
 
 
@@ -232,8 +238,8 @@ class CustomerController extends Controller
             }
             print_r($imagePath);
 
-            $filename = $imagePath .'/'. $imageName;
-            Storage::disk('public')->put($filename,file_get_contents($image));
+            $filename = $imagePath . '/' . $imageName;
+            Storage::disk('public')->put($filename, file_get_contents($image));
             $customer->image = $imageName;
             $customer->profile = $imageName;
         }
@@ -256,14 +262,14 @@ class CustomerController extends Controller
 
                 $image = $document;
                 $imageName = time() . '.' . $image->getClientOriginalExtension();
-                $imagePath = '/customer/'.$customer->customUrl.'/documents';
+                $imagePath = '/customer/' . $customer->customUrl . '/documents';
 
                 if (!Storage::exists($imagePath)) {
                     Storage::makeDirectory($imagePath, 0775, true); //creates directory
                 }
 
-                Storage::disk('public')->put($imagePath.'/'.$imageName, file_get_contents($image));
-                $cutomerDocuments[] = ['fileName' => $imageName, 'fileUrl' => $imagePath.'/'.$imageName, 'fileType' => $image->getClientOriginalExtension(), 'fileSize' => $image->getSize(),'customerId' => $customerId];
+                Storage::disk('public')->put($imagePath . '/' . $imageName, file_get_contents($image));
+                $cutomerDocuments[] = ['fileName' => $imageName, 'fileUrl' => $imagePath . '/' . $imageName, 'fileType' => $image->getClientOriginalExtension(), 'fileSize' => $image->getSize(), 'customerId' => $customerId];
             }
         }
 
@@ -288,6 +294,124 @@ class CustomerController extends Controller
     }
 
 
+    /* Send Inquery Mail */
+
+    public function sendInqueryMail(Request $request)
+    {
+
+
+        $inquery = new Inquery();
+        $inquery->name = $request->inqueryName;
+        $inquery->email = $request->inqueryEmail;
+        $inquery->number = $request->inqueryContactNumber;
+        $inquery->subject = $request->inquerySubject;
+        $inquery->message = $request->inqueryMessage;
+        $inquery->type = 'Inquery';
+
+        $inquery->save();
+
+        if ($inquery) {
+            $mailData = [
+                'name' => $request->inqueryName,
+                'email' => $request->inqueryEmail,
+                'number' => $request->inqueryContactNumber,
+                'subject' => $request->inquerySubject,
+                'message' => $request->inqueryMessage,
+            ];
+
+            Mail::to($request->customerEmail)->send(new inqueryMail($mailData));
+
+            return redirect()->route('customer.view', ['username' => $request->customUrl]);
+        }
+    }
+
+    /* Send Exchange Contact Mail */
+
+    public function sendexchangeContactMail(Request $request)
+    {
+
+        $inquery = new Inquery();
+        $inquery->name = $request->inqueryName;
+        $inquery->email = $request->inqueryEmail;
+        $inquery->number = $request->inqueryContactNumber;
+        $inquery->subject = $request->inquerySubject;
+        $inquery->message = $request->inqueryMessage;
+        $inquery->type = 'ExchangeContact';
+
+        $inquery->save();
+
+        if ($inquery) {
+            $mailData = [
+                'name' => $request->inqueryName,
+                'email' => $request->inqueryEmail,
+                'number' => $request->inqueryContactNumber,
+                'subject' => $request->inquerySubject,
+                'message' => $request->inqueryMessage,
+            ];
+
+            Mail::to($request->customerEmail)->send(new exchangeContactMail($mailData));
+
+            return redirect()->route('customer.view', ['username' => $request->customUrl]);
+        }
+        $mailData = [
+            'name' => $request->inqueryName,
+            'email' => $request->inqueryEmail,
+            'number' => $request->inqueryContactNumber,
+            'subject' => $request->inquerySubject,
+            'message' => $request->inqueryMessage,
+        ];
+    }
+
+
+    public function downloadVcard($id)
+    {
+
+        $customerData = customer::where('customUrl', $id)->first();
+
+        // dd($customerData);
+
+        // define vcard
+        $vcard = new VCard();
+
+        // define variables
+        $firstname = $customerData->name;
+        $lastname = '';
+        $additional = '';
+        $prefix = '';
+        $suffix = '';
+
+        // add personal data
+        $vcard->addName($lastname, $firstname, $additional, $prefix, $suffix);
+
+        // add work data
+        // $vcard->addCompany('Siesqo');
+        // $vcard->addJobtitle('Web Developer');
+        $vcard->addEmail($customerData->email);
+        $vcard->addPhoneNumber($customerData->contactNumber, 'WORK');
+        // $vcard->addURL('http://www.jeroendesloovere.be');
+        // $vcard->addLabel('street, worktown, workpostcode Belgium', 'work');
+
+        $vcard->addPhoto(asset('storage/customer/' . $customerData->customUrl . '/' . $customerData->image));
+        //$vcard->addPhoto('https://raw.githubusercontent.com/jeroendesloovere/vcard/master/tests/image.jpg');
+
+        // return vcard as a string
+        //return $vcard->getOutput();
+
+        // return vcard as a download
+        // return $vcard->download();
+        $content = $vcard->getOutput();
+
+        $response = new Response();
+        $response->setContent($content);
+        $response->setStatusCode(200);
+        $response->headers->set('Content-Type', 'text/x-vcard');
+        $response->headers->set('Content-Disposition', 'attachment; filename="' . $firstname . '.vcf"');
+        $response->headers->set('Content-Length', mb_strlen($content, 'utf-8'));
+
+        return $response;
+    }
+
+
     public function adminCutomerList()
     {
         return view('customer::list');
@@ -308,7 +432,7 @@ class CustomerController extends Controller
         $query = DB::table('customers')->select('*');
 
         // $query =   $query->leftJoin('customer_documents','customer_documents.customer_id', '=','customers.id');
-        $query =   $query->leftJoin('qrs','qrs.identifier', '=','customers.identifier');
+        $query =   $query->leftJoin('qrs', 'qrs.identifier', '=', 'customers.identifier');
 
 
         // Search
